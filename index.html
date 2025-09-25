@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MS Construtora - Sistema de Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* Estilo Profissional - v3.1 */
+        :root {
+            --color-bg: #f1f5f9;
+            --color-text: #1e293b;
+            --color-sidebar-bg: #1e293b;
+            --color-sidebar-text: #e2e8f0;
+            --color-card-bg: #ffffff;
+            --color-card-shadow: rgba(0,0,0,0.05);
+            --color-primary: #16a34a; /* Verde MS Construtora */
+            --color-primary-hover: #15803d;
+            --color-secondary: #475569; /* Cinza Ardósia */
+            --color-secondary-hover: #334155;
+            --color-danger: #dc2626;
+            --color-border: #e2e8f0;
+            --color-input-bg: #ffffff;
+            --color-hover-bg: #f8fafc;
+        }
+
+        .dark {
+            --color-bg: #0f172a;
+            --color-text: #e2e8f0;
+            --color-sidebar-bg: #0f172a;
+            --color-sidebar-text: #e2e8f0;
+            --color-card-bg: #1e293b;
+            --color-card-shadow: rgba(0,0,0,0.2);
+            --color-border: #334155;
+            --color-input-bg: #1e293b;
+            --color-hover-bg: #334155;
+        }
+
+        * { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+        body { background-color: var(--color-bg); color: var(--color-text); font-family: 'Inter', sans-serif; }
+        .bg-primary { background-color: var(--color-primary); }
+        .hover\:bg-primary-hover:hover { background-color: var(--color-primary-hover); }
+        .bg-secondary { background-color: var(--color-secondary); }
+        .hover\:bg-secondary-hover:hover { background-color: var(--color-secondary-hover); }
+        .text-danger { color: var(--color-danger); }
+        
+        .card { background-color: var(--color-card-bg); box-shadow: 0 4px 6px -1px var(--color-card-shadow), 0 2px 4px -2px var(--color-card-shadow); }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px var(--color-card-shadow), 0 4px 6px -2px var(--color-card-shadow); }
+        
+        #sidebar { background-color: var(--color-sidebar-bg); }
+        .sidebar-item.active, .sidebar-item:hover { background-color: var(--color-secondary); }
+
+        input, select, textarea { background-color: var(--color-input-bg); border-color: var(--color-border); }
+        input:focus, select:focus, textarea:focus { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2); }
+        
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal.active { display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 text-slate-200 transition-transform duration-300 transform md:translate-x-0 fixed md:static inset-y-0 left-0 z-40 md:z-auto md:flex flex-col h-full -translate-x-full">
+            <div class="p-4 flex justify-between items-center border-b border-slate-700">
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-hard-hat mr-3 text-primary"></i>
+                    <span>MS Construtora</span>
+                </h1>
+                <button id="closeSidebarBtn" class="md:hidden text-slate-200 text-2xl focus:outline-none">×</button>
+            </div>
+            <nav class="mt-8 flex-1">
+                <a href="#" onclick="showSection('dashboard')" class="sidebar-item flex items-center px-6 py-3 text-slate-300 hover:text-white transition-colors" id="menu-dashboard">
+                    <i class="fas fa-chart-pie fa-fw mr-3"></i>Dashboard
+                </a>
+                <a href="#" onclick="showSection('orcamentoObra')" class="sidebar-item flex items-center px-6 py-3 text-slate-300 hover:text-white transition-colors" id="menu-orcamentoObra">
+                    <i class="fas fa-file-invoice-dollar fa-fw mr-3"></i>Orçamento de Obra
+                </a>
+                <a href="#" onclick="showSection('orcamentoMaterial')" class="sidebar-item flex items-center px-6 py-3 text-slate-300 hover:text-white transition-colors" id="menu-orcamentoMaterial">
+                    <i class="fas fa-pallet fa-fw mr-3"></i>Orçamento de Material
+                </a>
+                <a href="#" onclick="showSection('materiais')" class="sidebar-item flex items-center px-6 py-3 text-slate-300 hover:text-white transition-colors" id="menu-materiais">
+                    <i class="fas fa-boxes fa-fw mr-3"></i>Cadastro de Materiais
+                </a>
+            </nav>
+            <div class="p-4 border-t border-slate-700">
+                <p class="text-xs text-slate-400">Versão 3.1 Profissional</p>
+            </div>
+        </aside>
+
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-40 z-30 hidden md:hidden"></div>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-card shadow-sm border-b border-border">
+                <div class="px-4 sm:px-8 py-4 flex justify-between items-center">
+                    <div class="flex items-center">
+                        <button id="openSidebarBtn" class="md:hidden mr-4 text-text text-2xl"><i class="fas fa-bars"></i></button>
+                        <h2 id="section-title" class="text-2xl font-semibold text-text">Dashboard</h2>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button id="themeToggle" class="p-2 rounded-lg hover:bg-hover-bg" title="Alternar tema"><i id="themeIcon" class="fas fa-moon text-xl"></i></button>
+                        <div class="relative">
+                            <button id="userMenuBtn" class="flex items-center space-x-2 hover:bg-hover-bg px-3 py-2 rounded-lg">
+                                <i class="fas fa-user-circle text-xl"></i>
+                                <span class="hidden sm:inline">Admin</span>
+                                <i class="fas fa-chevron-down text-sm"></i>
+                            </button>
+                            <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border">
+                                <a href="#" class="block px-4 py-2 hover:bg-hover-bg"><i class="fas fa-user mr-2"></i>Perfil</a>
+                                <a href="#" onclick="logout()" class="block px-4 py-2 hover:bg-hover-bg text-danger"><i class="fas fa-sign-out-alt mr-2"></i>Sair</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="p-4 sm:p-8">
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="card p-6 rounded-lg card-hover"><div class="flex items-center justify-between"><div><p class="text-sm text-slate-500">Orçamentos Gerados</p><p class="text-3xl font-bold mt-2" id="orcamentos-total">0</p></div><div class="bg-green-100 dark:bg-green-900 p-3 rounded-full"><i class="fas fa-file-invoice-dollar text-primary text-xl"></i></div></div></div>
+                    <div class="card p-6 rounded-lg card-hover"><div class="flex items-center justify-between"><div><p class="text-sm text-slate-500">Materiais Cadastrados</p><p class="text-3xl font-bold mt-2" id="total-materiais">0</p></div><div class="bg-sky-100 dark:bg-sky-900 p-3 rounded-full"><i class="fas fa-boxes text-sky-600 dark:text-sky-400 text-xl"></i></div></div></div>
+                    <div class="card p-6 rounded-lg card-hover"><div class="flex items-center justify-between"><div><p class="text-sm text-slate-500">Estoque de Itens</p><p class="text-3xl font-bold mt-2" id="estoque-total">0</p></div><div class="bg-amber-100 dark:bg-amber-900 p-3 rounded-full"><i class="fas fa-warehouse text-amber-600 dark:text-amber-400 text-xl"></i></div></div></div>
+                </div>
+                <div class="card rounded-lg shadow-md p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h3 class="text-xl font-semibold">Histórico de Orçamentos</h3>
+                        <div class="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full sm:w-auto"><input type="date" id="relatorioData" class="px-3 py-2 border rounded-lg focus:border-primary w-full sm:w-auto"><button onclick="filtrarRelatoriosPorData()" class="bg-secondary text-white px-4 py-2 rounded-lg hover:bg-secondary-hover transition w-full sm:w-auto">Filtrar</button><button onclick="limparFiltroRelatorios()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition w-full sm:w-auto">Limpar</button></div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full"><thead class="bg-slate-50 dark:bg-slate-800"><tr><th class="px-4 py-2 text-left text-xs font-medium uppercase">Data</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Cliente</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Tipo</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Itens</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Total</th><th class="px-4 py-2 text-center text-xs font-medium uppercase">Ações</th></tr></thead><tbody id="orcamentos-tbody-relatorio" class="divide-y divide-border"></tbody></table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Orçamento de Obra Section -->
+            <div id="orcamentoObra" class="p-4 sm:p-8" style="display: none;">
+                <div class="max-w-4xl mx-auto"><div class="card rounded-lg shadow-md p-6"><h3 class="text-xl font-semibold mb-4">Orçamento de Mão de Obra</h3><div class="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg"><h4 class="font-medium mb-3">Informações do Cliente</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><input type="text" id="obra-clientName" placeholder="Nome do cliente" class="px-3 py-2 border rounded-lg"><input type="text" id="obra-clientPhone" placeholder="Telefone" class="px-3 py-2 border rounded-lg"></div></div><form id="orcamentoObraForm" class="mb-6"><div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4 items-end"><div class="col-span-1 sm:col-span-2"><label class="block text-sm font-medium mb-1">Serviço / Descrição</label><input type="text" id="obra-servico" placeholder="Ex: Instalação de cerâmica m²" class="w-full px-3 py-2 border rounded-lg"></div><div><label class="block text-sm font-medium mb-1">Quantidade</label><input type="number" id="obra-quantidade" min="0" step="0.01" class="w-full px-3 py-2 border rounded-lg" value="1"></div><div><label class="block text-sm font-medium mb-1">Valor Unit. (R$)</label><input type="number" id="obra-valor-unitario" min="0" step="0.01" class="w-full px-3 py-2 border rounded-lg" placeholder="R$ 0,00"></div></div><div class="flex items-end"><button type="button" onclick="addServicoOrcamento()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-hover transition w-full sm:w-auto"><i class="fas fa-plus mr-2"></i>Adicionar Serviço</button></div></form><div class="overflow-x-auto"><table class="w-full mb-4"><thead class="bg-slate-50 dark:bg-slate-800"><tr><th class="px-4 py-2 text-left text-xs font-medium uppercase">Quant.</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Serviço</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Valor Un.</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Valor total</th><th class="px-4 py-2"></th></tr></thead><tbody id="orcamento-obra-tbody" class="divide-y divide-border"></tbody><tfoot><tr class="border-t-2 border-border"><td colspan="3" class="px-4 py-3 text-right font-bold">Soma</td><td id="orcamento-obra-total" class="px-4 py-3 font-bold text-lg">R$ 0,00</td><td></td></tr></tfoot></table></div><div class="mt-6"><label for="obra-observacoes" class="block text-sm font-medium mb-1">Observações</label><textarea id="obra-observacoes" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Escreva Aqui"></textarea></div><div class="flex flex-col sm:flex-row justify-end items-center gap-4 pt-4 border-t border-border mt-6"><button onclick="clearOrcamento('obra')" class="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition">Limpar</button><button onclick="gerarOrcamentoFinal('obra')" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition"><i class="fas fa-file-pdf mr-2"></i>Gerar PDF</button></div></div></div>
+            </div>
+
+            <!-- Orçamento de Material Section -->
+            <div id="orcamentoMaterial" class="p-4 sm:p-8" style="display: none;">
+                <div class="max-w-4xl mx-auto"><div class="card rounded-lg shadow-md p-6"><h3 class="text-xl font-semibold mb-4">Orçamento de Material</h3><div class="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg"><h4 class="font-medium mb-3">Informações do Cliente</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><input type="text" id="mat-clientName" placeholder="Nome do cliente" class="px-3 py-2 border rounded-lg"><input type="text" id="mat-clientPhone" placeholder="Telefone" class="px-3 py-2 border rounded-lg"></div></div><form id="orcamentoMaterialForm" class="mb-6"><div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4 items-end"><div class="col-span-1 sm:col-span-2"><label class="block text-sm font-medium mb-1">Descrição do Material</label><input type="text" id="mat-descricao-input" placeholder="Ex: Cimento Votoran 50kg" class="w-full px-3 py-2 border rounded-lg"></div><div><label class="block text-sm font-medium mb-1">Quantidade</label><input type="number" id="mat-quantidade" min="0" step="0.01" class="w-full px-3 py-2 border rounded-lg" value="1"></div><div><label class="block text-sm font-medium mb-1">Valor Unit. (R$)</label><input type="number" id="mat-valor-unitario" min="0" step="0.01" class="w-full px-3 py-2 border rounded-lg" placeholder="R$ 0,00"></div></div><div class="flex items-end"><button type="button" onclick="addMaterialOrcamento()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-hover transition w-full sm:w-auto"><i class="fas fa-plus mr-2"></i>Adicionar Material</button></div></form><div class="overflow-x-auto"><table class="w-full mb-4"><thead class="bg-slate-50 dark:bg-slate-800"><tr><th class="px-4 py-2 text-left text-xs font-medium uppercase">Quant.</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Material</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Preço Un.</th><th class="px-4 py-2 text-left text-xs font-medium uppercase">Preço total</th><th class="px-4 py-2"></th></tr></thead><tbody id="orcamento-material-tbody" class="divide-y divide-border"></tbody><tfoot><tr class="border-t-2 border-border"><td colspan="3" class="px-4 py-3 text-right font-bold">Soma</td><td id="orcamento-material-total" class="px-4 py-3 font-bold text-lg">R$ 0,00</td><td></td></tr></tfoot></table></div><div class="mt-6"><label for="mat-observacoes" class="block text-sm font-medium mb-1">Observações</label><textarea id="mat-observacoes" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Ex: Pagamento à vista. Frete a combinar."></textarea></div><div class="flex flex-col sm:flex-row justify-end items-center gap-4 pt-4 border-t border-border mt-6"><button onclick="clearOrcamento('material')" class="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition">Limpar</button><button onclick="gerarOrcamentoFinal('material')" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition"><i class="fas fa-file-pdf mr-2"></i>Gerar PDF</button></div></div></div>
+            </div>
+            
+            <!-- Cadastro de Materiais Section -->
+            <div id="materiais" class="p-4 sm:p-8" style="display: none;">
+                <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"><h3 class="text-xl font-semibold">Cadastro de Materiais</h3><button onclick="openModal('materialModal')" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-hover transition"><i class="fas fa-plus mr-2"></i>Adicionar Material</button></div>
+                <div class="card rounded-lg shadow-md overflow-hidden"><div class="overflow-x-auto"><table class="w-full"><thead class="bg-slate-50 dark:bg-slate-800"><tr><th class="px-4 py-3 text-left text-xs font-medium uppercase">Descrição</th><th class="px-4 py-3 text-left text-xs font-medium uppercase">Preço (R$)</th><th class="px-4 py-3 text-left text-xs font-medium uppercase">Categoria</th><th class="px-4 py-3 text-left text-xs font-medium uppercase">Estoque</th><th class="px-4 py-3 text-center text-xs font-medium uppercase">Ações</th></tr></thead><tbody id="materiais-tbody" class="divide-y divide-border"></tbody></table></div></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Material -->
+    <div id="materialModal" class="modal"><div class="bg-card rounded-lg p-6 w-full max-w-md mx-4"><h3 id="materialModalTitle" class="text-xl font-semibold mb-4">Adicionar Material</h3><form id="materialForm"><div class="grid grid-cols-1 gap-4"><input type="text" id="mat-descricao" placeholder="Descrição *" class="w-full px-3 py-2 border rounded-lg" required><input type="text" id="mat-categoria" placeholder="Categoria *" class="w-full px-3 py-2 border rounded-lg" required><div class="grid grid-cols-2 gap-4"><input type="number" id="mat-preco-real" step="0.01" min="0" placeholder="Preço (R$) *" class="w-full px-3 py-2 border rounded-lg" required><input type="number" id="mat-estoque" min="0" placeholder="Estoque" class="w-full px-3 py-2 border rounded-lg"></div></div><div class="flex justify-end space-x-2 mt-6"><button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-hover transition">Cancelar</button><button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition"><i class="fas fa-save mr-2"></i>Salvar</button></div></form></div></div>
+    
+    <script>
+        // MS Construtora - Sistema de Gestão v3.1
+
+        // --- URL do Logo ---
+        // AQUI ESTÁ A CORREÇÃO: Use o "Link direto" que termina em .png ou .jpg
+        const LOGO_URL = 'https://i.ibb.co/fY06VPdR/MS-Construtora-Melhorado-1.png';
+
+        let materiais = [], orcamentos = [], orcamentoObraAtual = [], orcamentoMaterialAtual = [], filtroDataRelatorio = null;
+        const cache = { get: key => { const d = localStorage.getItem(key); return d ? JSON.parse(d) : null; }, set: (key, val) => localStorage.setItem(key, JSON.stringify(val)) };
+        
+        // --- UI & CORE ---
+        const initSidebar = () => { const s=document.getElementById("sidebar"),o=document.getElementById("openSidebarBtn"),c=document.getElementById("closeSidebarBtn"),v=document.getElementById("sidebarOverlay");o.addEventListener("click",()=>{s.classList.remove("-translate-x-full"),v.classList.remove("hidden")});const l=()=>{s.classList.add("-translate-x-full"),v.classList.add("hidden")};c.addEventListener("click",l),v.addEventListener("click",l) };
+        const initUserMenu = () => { const b=document.getElementById("userMenuBtn"),d=document.getElementById("userMenuDropdown");b.addEventListener("click",e=>{e.stopPropagation(),d.classList.toggle("hidden")}),document.addEventListener("click",()=>d.classList.add("hidden")) };
+        const themeSystem = { init:()=>{const t=localStorage.getItem("theme")||"dark";themeSystem.apply(t),document.getElementById("themeToggle").addEventListener("click",()=>{const e=document.documentElement.classList.contains("dark")?"light":"dark";themeSystem.apply(e)})},apply:t=>{t==="dark"?(document.documentElement.classList.add("dark"),document.getElementById("themeIcon").classList.replace("fa-moon","fa-sun")):(document.documentElement.classList.remove("dark"),document.getElementById("themeIcon").classList.replace("fa-sun","fa-moon")),localStorage.setItem("theme",t)} };
+        const openModal = id => document.getElementById(id).classList.add('active');
+        const closeModal = id => document.getElementById(id).classList.remove('active');
+        
+        function showSection(sectionName) {
+            document.querySelectorAll('main > div').forEach(div => div.style.display = 'none');
+            document.getElementById(sectionName).style.display = 'block';
+            
+            const titles = { 'dashboard': 'Dashboard & Relatórios', 'orcamentoObra': 'Orçamento de Mão de Obra', 'orcamentoMaterial': 'Orçamento de Material', 'materiais': 'Cadastro de Materiais' };
+            document.getElementById('section-title').textContent = titles[sectionName] || '';
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`menu-${sectionName}`)?.classList.add('active');
+
+            if (sectionName === 'dashboard') updateDashboard();
+            if (sectionName === 'materiais') loadMateriais();
+        }
+        
+        function updateDashboard() {
+            orcamentos = cache.get('orcamentos') || [];
+            materiais = cache.get('materiais') || [];
+            document.getElementById('orcamentos-total').textContent = orcamentos.length;
+            document.getElementById('total-materiais').textContent = materiais.length;
+            document.getElementById('estoque-total').textContent = materiais.reduce((acc, m) => acc + (Number(m.estoque) || 0), 0);
+            renderRelatorios();
+        }
+
+        // --- Orçamento de Obra ---
+        const addServicoOrcamento = () => { const d=document.getElementById("obra-servico").value.trim(),q=parseFloat(document.getElementById("obra-quantidade").value),v=parseFloat(document.getElementById("obra-valor-unitario").value);if(!d||isNaN(q)||isNaN(v)||q<=0||v<=0)return void alert("Preencha todos os campos do serviço corretamente.");orcamentoObraAtual.push({id:Date.now(),descricao:d,quantidade:q,valorUnitario:v}),renderOrcamentoTable("obra"),document.getElementById("orcamentoObraForm").reset(),document.getElementById("obra-quantidade").value="1",document.getElementById("obra-servico").focus() };
+        
+        // --- Orçamento de Material ---
+        const addMaterialOrcamento = () => { const d = document.getElementById("mat-descricao-input").value.trim(), q = parseFloat(document.getElementById("mat-quantidade").value), v = parseFloat(document.getElementById("mat-valor-unitario").value); if (!d || isNaN(q) || isNaN(v) || q <= 0 || v <= 0) return void alert("Preencha todos os campos do material corretamente."); orcamentoMaterialAtual.push({ id: Date.now(), descricao: d, quantidade: q, valorUnitario: v }), renderOrcamentoTable("material"), document.getElementById("orcamentoMaterialForm").reset(), document.getElementById("mat-quantidade").value = "1", document.getElementById("mat-descricao-input").focus() };
+
+        // --- Funções Genéricas de Orçamento ---
+        function iniciarEdicaoItem(type, id) {
+            const isObra = type === 'obra';
+            let currentList = isObra ? orcamentoObraAtual : orcamentoMaterialAtual;
+            const itemIndex = currentList.findIndex(item => item.id === id);
+            if (itemIndex === -1) return;
+            const [item] = currentList.splice(itemIndex, 1);
+            
+            const descInput = document.getElementById(isObra ? 'obra-servico' : 'mat-descricao-input');
+            const quantInput = document.getElementById(isObra ? 'obra-quantidade' : 'mat-quantidade');
+            const valorInput = document.getElementById(isObra ? 'obra-valor-unitario' : 'mat-valor-unitario');
+            
+            descInput.value = item.descricao;
+            quantInput.value = item.quantidade;
+            valorInput.value = item.valorUnitario;
+            
+            renderOrcamentoTable(type);
+            descInput.focus();
+        }
+
+        function removerItem(type, id) {
+            if (type === 'obra') { orcamentoObraAtual = orcamentoObraAtual.filter(i => i.id !== id); } 
+            else { orcamentoMaterialAtual = orcamentoMaterialAtual.filter(i => i.id !== id); }
+            renderOrcamentoTable(type);
+        }
+
+        function renderOrcamentoTable(type) {
+            const isObra = type === 'obra';
+            const tbody = document.getElementById(isObra ? 'orcamento-obra-tbody' : 'orcamento-material-tbody');
+            const totalEl = document.getElementById(isObra ? 'orcamento-obra-total' : 'orcamento-material-total');
+            const currentList = isObra ? orcamentoObraAtual : orcamentoMaterialAtual;
+            let total = 0;
+
+            if (currentList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhum item adicionado.</td></tr>`;
+            } else {
+                tbody.innerHTML = currentList.map(item => {
+                    const totalItem = item.quantidade * item.valorUnitario;
+                    total += totalItem;
+                    return `<tr class="hover:bg-hover-bg">
+                        <td>${item.quantidade.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                        <td>${item.descricao}</td>
+                        <td>R$ ${item.valorUnitario.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                        <td class="font-medium">R$ ${totalItem.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+                        <td class="text-center">
+                            <button onclick="iniciarEdicaoItem('${type}', ${item.id})" class="text-secondary hover:opacity-75 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
+                            <button onclick="removerItem('${type}', ${item.id})" class="text-danger hover:opacity-75" title="Remover"><i class="fas fa-times-circle"></i></button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+            totalEl.textContent = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        }
+        
+        const clearOrcamento = type => { if(confirm(`Deseja limpar todos os itens do orçamento de ${type}?`)) { if (type === 'obra') { orcamentoObraAtual = []; document.getElementById('obra-observacoes').value = ''; } else { orcamentoMaterialAtual = []; document.getElementById('mat-observacoes').value = ''; } renderOrcamentoTable(type); } };
+        
+        async function gerarOrcamentoFinal(type) {
+            const isObra = type === 'obra';
+            const currentList = isObra ? orcamentoObraAtual : orcamentoMaterialAtual;
+            if (currentList.length === 0) return alert(`Adicione itens ao orçamento de ${type}!`);
+            
+            // --- INÍCIO DA CORREÇÃO ---
+            // O prefixo dos IDs no HTML de material é "mat-" e não "material-"
+            // Esta variável garante que o prefixo correto seja usado para cada tipo de orçamento.
+            const prefix = isObra ? 'obra' : 'mat';
+
+            const clientName = document.getElementById(`${prefix}-clientName`).value.trim() || 'Cliente';
+            const clientPhone = document.getElementById(`${prefix}-clientPhone`).value.trim();
+            const observacoes = document.getElementById(`${prefix}-observacoes`).value.trim();
+            // --- FIM DA CORREÇÃO ---
+
+            const novoOrcamento = {
+                id: Date.now(), type, data: new Date(), cliente: clientName, telefone: clientPhone, observacoes,
+                itens: [...currentList],
+                total: currentList.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0)
+            };
+            orcamentos.push(novoOrcamento);
+            cache.set('orcamentos', orcamentos);
+            
+            await generatePDF(novoOrcamento); 
+
+            // Limpa o formulário usando o prefixo correto
+            if (isObra) { 
+                orcamentoObraAtual = []; 
+                document.getElementById('obra-clientName').value = ''; 
+                document.getElementById('obra-clientPhone').value = ''; 
+                document.getElementById('obra-observacoes').value = ''; 
+            } else { 
+                orcamentoMaterialAtual = []; 
+                document.getElementById('mat-clientName').value = ''; 
+                document.getElementById('mat-clientPhone').value = ''; 
+                document.getElementById('mat-observacoes').value = ''; 
+            }
+            renderOrcamentoTable(type);
+            alert('Orçamento gerado e salvo com sucesso!');
+        }
+
+        // --- PDF & Relatórios ---
+        async function generatePDF(orc) {
+            const { jsPDF } = window.jspdf; 
+            const doc = new jsPDF();
+            const isObra = orc.type === 'obra';
+
+            try {
+                const img = new Image();
+                img.crossOrigin = "Anonymous"; 
+                const response = await fetch(LOGO_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const blob = await response.blob();
+                const objectURL = URL.createObjectURL(blob);
+                img.src = objectURL;
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+                doc.addImage(img, 'PNG', 75, 8, 60, 25); 
+                URL.revokeObjectURL(objectURL);
+            } catch (error) {
+                console.error("Erro ao carregar o logo. Verifique se a URL está correta e é um link direto. Usando texto como fallback.", error);
+                doc.setFontSize(20); doc.setFont(undefined, 'bold'); doc.text("MS Construtora", 105, 20, {align:"center"});
+            }
+
+            doc.setFontSize(16); doc.setFont(undefined, 'normal'); doc.text(isObra ? "ORÇAMENTO DE OBRA" : "ORÇAMENTO DE MATERIAL", 105, 40, {align:"center"});
+            doc.setFontSize(10); doc.text(`Data: ${new Date(orc.data).toLocaleDateString('pt-BR')}`, 20, 50); doc.text(`Cliente: ${orc.cliente}`, 20, 55); if (orc.telefone) doc.text(`Telefone: ${orc.telefone}`, 20, 60);
+            
+            const head = [["Quant.", isObra ? "Serviço" : "Material", "Valor Un.", "Valor Total"]];
+            const body = orc.itens.map(i => [i.quantidade.toLocaleString('pt-BR',{minimumFractionDigits:2}), i.descricao, `R$ ${i.valorUnitario.toLocaleString('pt-BR',{minimumFractionDigits:2})}`, `R$ ${(i.quantidade*i.valorUnitario).toLocaleString('pt-BR',{minimumFractionDigits:2})}`] );
+
+            doc.autoTable({
+                head, body,
+                foot: [['', '', {content:'Soma',styles:{halign:'right'}}, `R$ ${orc.total.toLocaleString('pt-BR',{minimumFractionDigits:2})}`]],
+                startY: orc.telefone ? 65 : 60, theme: 'grid', styles: { lineColor:[0,0,0], lineWidth:0.1, font:'helvetica', fontSize:10 },
+                headStyles: {fillColor:[211,211,211],textColor:[0,0,0],fontStyle:'bold'}, footStyles: {fillColor:[211,211,211],textColor:[0,0,0],fontStyle:'bold'},
+                columnStyles: { 0:{cellWidth:25}, 1:{cellWidth:85}, 2:{halign:'right'}, 3:{halign:'right'} }
+            });
+            if (orc.observacoes) { let finalY = doc.autoTable.previous.finalY + 10; doc.setFont(undefined, 'bold'); doc.text("Observações:", 20, finalY); doc.setFont(undefined, 'normal'); doc.text(doc.splitTextToSize(orc.observacoes, 170), 20, finalY + 5); }
+            doc.save(`orcamento_${orc.cliente.replace(/\s+/g,'_')}_${orc.type}.pdf`);
+        }
+
+        function renderRelatorios() {
+            let orcs = (cache.get('orcamentos') || []).slice().reverse();
+            if (filtroDataRelatorio) orcs = orcs.filter(o => new Date(o.data).toISOString().slice(0, 10) === filtroDataRelatorio);
+            const tbody = document.getElementById('orcamentos-tbody-relatorio');
+            if (orcs.length===0) return tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-500">Nenhum orçamento encontrado.</td></tr>';
+            tbody.innerHTML = orcs.map(o => `
+                <tr class="hover:bg-hover-bg">
+                    <td class="px-4 py-2 text-sm">${new Date(o.data).toLocaleDateString('pt-BR')}</td>
+                    <td class="px-4 py-2 text-sm">${o.cliente}</td>
+                    <td class="px-4 py-2 text-sm">${o.type === 'obra' ? 'Mão de Obra' : 'Material'}</td>
+                    <td class="px-4 py-2 text-sm text-center">${o.itens.length}</td>
+                    <td class="px-4 py-2 font-medium">R$ ${o.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    <td class="px-4 py-2 text-center"><button onclick="reimprimirOrcamento(${o.id})" class="text-secondary hover:opacity-75" title="Reimprimir"><i class="fas fa-print"></i></button></td>
+                </tr>`).join('');
+        }
+        const filtrarRelatoriosPorData = () => { filtroDataRelatorio = document.getElementById('relatorioData').value; renderRelatorios(); };
+        const limparFiltroRelatorios = () => { filtroDataRelatorio = null; document.getElementById('relatorioData').value = ''; renderRelatorios(); };
+        const reimprimirOrcamento = async id => {
+            const orc = (cache.get('orcamentos')||[]).find(o => o.id === id); 
+            if (orc) await generatePDF(orc);
+        };
+        
+        // --- Cadastro de Materiais ---
+        function loadMateriais() {
+            materiais = cache.get('materiais') || [];
+            const tbody = document.getElementById('materiais-tbody');
+            if (materiais.length === 0) return tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-500">Nenhum material cadastrado.</td></tr>';
+            tbody.innerHTML = materiais.map(m => `
+                <tr class="hover:bg-hover-bg">
+                    <td class="px-4 py-3">${m.descricao}</td><td class="px-4 py-3">R$ ${m.preco.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    <td class="px-4 py-3">${m.categoria}</td><td class="px-4 py-3">${m.estoque}</td>
+                    <td class="px-4 py-3 text-center">
+                        <button onclick="editarMaterial(${m.id})" class="text-secondary hover:opacity-75 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
+                        <button onclick="excluirMaterial(${m.id})" class="text-danger hover:opacity-75" title="Excluir"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+        document.getElementById('materialForm').addEventListener('submit', e => {
+            e.preventDefault(); const form = e.target;
+            const data = { descricao:form.querySelector('#mat-descricao').value, preco:parseFloat(form.querySelector('#mat-preco-real').value), categoria:form.querySelector('#mat-categoria').value, estoque:parseInt(form.querySelector('#mat-estoque').value)||0 };
+            const editId = form.dataset.editId;
+            if (editId) { const index = materiais.findIndex(m => m.id == editId); if (index > -1) materiais[index] = {id:parseInt(editId), ...data}; } 
+            else { materiais.push({id:Date.now(), ...data}); }
+            cache.set('materiais', materiais); loadMateriais(); updateDashboard(); closeModal('materialModal');
+        });
+        const editarMaterial = id => { const mat=materiais.find(m=>m.id==id);if(!mat)return;const f=document.getElementById("materialForm");f.dataset.editId=id,document.getElementById("materialModalTitle").textContent="Editar Material",f.querySelector("#mat-descricao").value=mat.descricao,f.querySelector("#mat-preco-real").value=mat.preco,f.querySelector("#mat-categoria").value=mat.categoria,f.querySelector("#mat-estoque").value=mat.estoque,openModal("materialModal") };
+        const excluirMaterial = id => { if(confirm("Tem certeza?")){materiais=materiais.filter(m=>m.id!=id),cache.set("materiais",materiais),loadMateriais(),updateDashboard()} };
+        const logout = () => { if(confirm('Deseja realmente sair?')) { localStorage.clear(); window.location.reload(); }};
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            themeSystem.init(); initSidebar(); initUserMenu();
+            document.getElementById('materialModal').addEventListener('click', e => { if (e.target.id === 'materialModal') closeModal('materialModal'); });
+            document.querySelector('#materialModal button[type="button"]').addEventListener('click', () => {
+                const form = document.getElementById('materialForm'); form.reset(); delete form.dataset.editId;
+                document.getElementById('materialModalTitle').textContent = 'Adicionar Material';
+            });
+            showSection('dashboard');
+        });
+    </script>
+</body>
+</html>
